@@ -1,0 +1,30 @@
+# Hardened SSH server configuration
+
+Port 22
+Protocol 2
+
+# Key-based authentication only
+PubkeyAuthentication yes
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+
+# Disable direct root login
+PermitRootLogin no
+
+# Allow only specific users
+AllowUsers deployuser
+
+# Limit login attempts and idle sessions
+MaxAuthTries 3
+LoginGraceTime 30
+ClientAliveInterval 300
+ClientAliveCountMax 2
+
+# Disable unused features
+X11Forwarding no
+AllowTcpForwarding no
+
+# Logging
+LogLevel VERBOSE
