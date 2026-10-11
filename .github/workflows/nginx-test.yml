@@ -1,0 +1,51 @@
+name: Validate Nginx and Linux Config
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check firewall script syntax
+        run: bash -n ufw-setup.sh
+
+      - name: Install Nginx
+        run: |
+          sudo systemctl stop apache2 || true
+          sudo apt-get update
+          sudo apt-get install -y nginx
+
+      - name: Create self-signed certificate
+        run: |
+          sudo mkdir -p /etc/nginx/ssl
+          sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout /etc/nginx/ssl/selfsigned.key \
+            -out /etc/nginx/ssl/selfsigned.crt \
+            -subj "/CN=localhost"
+
+      - name: Apply nginx.conf and validate syntax
+        run: |
+          sudo cp nginx.conf /etc/nginx/nginx.conf
+          sudo nginx -t
+
+      - name: Start dummy backend on port 5000
+        run: |
+          mkdir -p /tmp/site && echo "backend ok" > /tmp/site/index.html
+          cd /tmp/site && nohup python3 -m http.server 5000 > /dev/null 2>&1 &
+          sleep 2
+
+      - name: Restart Nginx
+        run: sudo systemctl restart nginx
+
+      - name: Test HTTP redirects to HTTPS
+        run: curl -sI http://localhost | head -n 5
+
+      - name: Test HTTPS reverse proxy
+        run: |
+          curl -skI https://localhost | head -n 10
+          curl -sk https://localhost
